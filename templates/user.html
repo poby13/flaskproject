@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>사용자</title>
+    <style>
+        .alert { background-color: red; color: white; }
+    </style>
+</head>
+<body>
+{% if err is not none %}   
+    <div class="alert">{{err}}</div>   
+{%endif %}
+    
+    <h1>사용자</h1>
+    <form action="/user" method="GET">
+    <!-- <form action="/user" method="POST"> -->
+        <input type="hidden" name="cmd" value="insert">
+        <input type="text" name="name">
+        <button type="submit">입력</button>
+    </form>
+    {{data | safe}}
+    <script>
+        var myform = document.getElementsByTagName("form");
+        function addChild(mykey, myval) {
+            var myinput = document.createElement("input");
+            myinput.setAttribute("type", "hidden");
+            myinput.setAttribute("name", mykey);
+            myinput.setAttribute("value", myval);
+            myform[0].appendChild(myinput)
+        }
+        function updateForm(myid) {
+            var new_name = prompt("새이름을 입력!");
+            addChild('id', myid);
+            addChild('name', new_name);
+            document.querySelector("form input[name='cmd']").value = "update";
+            // document.querySelector("form button").innerText = "수정";
+            // document.querySelector("form input[name='name']").value = new_name;
+            document.querySelector("form input[name='name']").disabled = true;
+            myform[0].submit();
+            return false;
+        }
+ 
+    </script>
+</body>
+</html>

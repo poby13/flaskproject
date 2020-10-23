@@ -1,0 +1,24 @@
+version: "3.7"
+
+services:
+  app:
+    image: flask-started:latest
+    command: gunicorn -b 0.0.0.0:5000 wsgi:app
+    ports:
+      - 5000:5000
+    volumes:
+      - ./:/flask-proj
+
+  mariadb:
+    image: mariadb:latest
+    restart: always
+    # command: --init-file init.sql
+    volumes:
+      - flask-app-db:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      MYSQL_ROOT_PASSWORD: qwer1234
+      MYSQL_DATABASE: mydb
+
+volumes:
+  flask-app-db:
