@@ -1,13 +1,28 @@
-#-*- coding:utf-8 -*-
+# -*- coding:utf-8 -*-
 import mariadb
 import configparser
 import sys
+import bcrypt
+import os
 from flask import Flask, request, render_template
- 
-app = Flask(__name__)
 
+# file upload https://tinyurl.com/yxkr95gr
+
+from werkzeug.utils import secure_filename
+
+UPLOAD_FOLDER = '/flask-proj/static/uploads'
+ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
+
+
+app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 config = configparser.ConfigParser()
 config.read('app.ini')
+
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
 
 
 def get_conn():
@@ -20,26 +35,29 @@ def get_conn():
         database=cfg['database']
     )
     return conn
- 
+
+
 @app.route("/")
 def hello():
     return "<h1 style='color:blue'>플라스크 프로젝트</h1>"
- 
+
 # get 방식 호출
-@app.route("/user")
+
+
+@app.route("/user", methods=['GET', 'POST'])
 def user():
     html = ""
     error = ""
- 
+
     sql = get_sql()
     # 삭제에러가 발생하면
- 
+
     print("sql = ", sql)
- 
+
     conn = get_conn()
     # 삭제, 수정, 추가
     cur = conn.cursor()
-    
+
     # 입력, 수정, 삭제인 경우
     sql_head = sql[:3]
     print("="*10, sql_head)
@@ -52,94 +70,93 @@ def user():
         error = sql
     # else:
     #     error = "예상되지 않은 오류가 발생했습니다."
- 
+
     # 적용결과
-    
+
     if sql[:6] != 'SELECT':
         # 반영결과를 추출한다.
         sql = 'SELECT id, name FROM mytest ORDER BY id desc'
         cur.execute(sql)
- 
- 
-    
+
     for (id, name) in cur:
         html += "{name} <button onclick=\"updateForm({id})\">Edit</button> <a href=\"/user?cmd=delete&id={id}\">Del</a><br>\n".format(
-            id=id, 
+            id=id,
             name=name
         )
-    
+
     if conn:
         conn.close()
-    
+
     # request.args의 데이터타입은 {"cmd": "insert"}
- 
+
     # return html
     return render_template(
-        "user.html", 
-        # action=request.args.get('cmd'),
-        data = html,
-        err = error
+        "user.html",
+        # action=request_param.get('cmd'),
+        data=html,
+        err=error
     )
- 
-# get 방식 입력
-@app.route("/newuser")
-def user_insert():
-    # http://localhost:5000/user?name=f
-    # 참고: https://tinyurl.com/y47eyszw
-    new_name = request.args.get('name') # f
-    conn = get_conn()
-    sql = "INSERT INTO mytest (name) VALUES ('{}')".format(new_name)
- 
-    cur = conn.cursor()
-    cur.execute(sql)
-    
-    conn.commit()
- 
-    if conn:
-        conn.close()
-    
-    return "입력성공"
- 
+
+
 def get_sql():
-    msg = ""
     err = ""
+    request_param = request.args
+
+    if request.method == 'POST':
+        request_param = request.form
+
     # 처리 방식을 구분
-    cmd = request.args.get('cmd')
+    cmd = request_param.get('cmd')
     # 파라미터가 없으면 None이 반환된다.
     # print(cmd)
     try:
         # 추가
         if cmd == 'insert':
-            name = request.args.get('name')
+            name = request_param.get('name')
+            password = request_param.get('password')
+            filename = ""
+            
+            # 해시코드 https://tinyurl.com/yb3bq6c6
+            hashed = bcrypt.hashpw(
+                password.encode('utf-8'), bcrypt.gensalt(14))
             # name == ""
             # not name(거짓) ==> 참 ==> if 코드블록 실행
             if not name:
                 raise Exception('이름을 확인해 주세요.')
-            sql = "INSERT INTO mytest (name) VALUES ('{}')".format(name)
+
+            file = request.files['file']
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            if filename:
+                sql = "INSERT INTO mytest (name, password, file) VALUES ('%s', '%s', '%s')" % (name, hashed.decode(), filename)
+            else:
+                sql = "INSERT INTO mytest (name, password) VALUES ('%s', '%s')" % (
+                    name, hashed.decode())
         # 삭제
         elif cmd == 'delete':
-            id = request.args.get('id')
-            sql = 'DELETE FROM mytest WHERE id={}'.format(int(id))
- 
+            id = request_param.get('id')
+            sql = 'DELETE FROM mytest WHERE id=%d' % int(id)
+
         # 수정
         elif cmd == 'update':
-            name = request.args.get('name')
+            name = request_param.get('name')
             if name == None:
                 raise Exception('이름을 확인해 주세요.')
-            id = request.args.get('id')
-            sql = "UPDATE mytest SET name='{}' WHERE id={}".format(name, int(id))
+            id = request_param.get('id')
+            sql = "UPDATE mytest SET name='%s' WHERE id=%d" % (name, int(id))
         else:
             # 기타는 모두 목록보기
             sql = err
     except TypeError as err:
-        sql = "ERROR: {0}".format(err)
+        print(err)
+        sql = "ERROR: %s" % err
     except Exception as err:
-        sql = "ERROR: {0}".format(err)
- 
+        print(err)
+        sql = "ERROR: %s" % err
+
     return sql
- 
- 
- 
- 
+
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0')

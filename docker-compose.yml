@@ -11,8 +11,9 @@ services:
 
   mariadb:
     image: mariadb:latest
-    restart: always
-    # command: --init-file init.sql
+    # restart: always
+    ports:
+      - 3306:3306
     volumes:
       - flask-app-db:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql

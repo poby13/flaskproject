@@ -1,5 +1,6 @@
 FROM python:latest
 RUN mkdir /flask-proj
+RUN mkdir -p /flask-proj/static/uploads
 WORKDIR /flask-proj
 COPY . .
 RUN pip install -r requirements.txt

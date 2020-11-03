@@ -1,23 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>사용자</title>
     <style>
-        .alert { background-color: red; color: white; }
+        .alert {
+            background-color: red;
+            color: white;
+        }
     </style>
 </head>
+
 <body>
-{% if err is not none %}   
-    <div class="alert">{{err}}</div>   
-{%endif %}
-    
+    {% if err is not none %}
+    <div class="alert">{{err}}</div>
+    {%endif %}
+
     <h1>사용자</h1>
-    <form action="/user" method="GET">
-    <!-- <form action="/user" method="POST"> -->
+    <form action="/user" method="POST" encType="multipart/form-data">
+        <!-- <form action="/user" method="POST"> -->
         <input type="hidden" name="cmd" value="insert">
         <input type="text" name="name">
+        <input type="password" name="password">
+        <input type="file" name="file">
         <button type="submit">입력</button>
     </form>
     {{data | safe}}
@@ -41,7 +48,7 @@
             myform[0].submit();
             return false;
         }
- 
     </script>
 </body>
+
 </html>
